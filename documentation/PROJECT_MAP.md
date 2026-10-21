@@ -1,10 +1,10 @@
-# Карта Проекта mosobr_ai
+# Карта проекта KAIT.ai
 
 Эта заметка объясняет, зачем нужна каждая папка и каждый файл в проекте. Ее можно читать как технический конспект.
 
 ## 1. Главная Идея
 
-`mosobr_ai` - локальный AI-помощник поступления в колледжи Москвы: профориентация, выбор колледжа и вопросы поступления.
+`kait_ai` - локальный AI-помощник поступления в колледжи Москвы: профориентация, выбор колледжа и вопросы поступления.
 
 Система не дообучает языковую модель. Вместо этого она использует RAG:
 
@@ -812,7 +812,7 @@ PowerShell-скрипт для выгрузки логов.
 Главные переменные:
 
 ```env
-APP_NAME=MosObr AI
+APP_NAME=KAIT.ai
 APP_ENV=dev
 LOG_LEVEL=INFO
 OLLAMA_HOST=http://localhost:11434
@@ -821,7 +821,7 @@ OLLAMA_MODEL=qwen2.5:7b-instruct
 EMBEDDING_MODEL=BAAI/bge-m3
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5432
-POSTGRES_DB=mosobr_ai
+POSTGRES_DB=kait_ai
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 DATA_PATH=./data/colleges.json

@@ -57,7 +57,7 @@ curl -H "Authorization: Bearer secret" http://localhost:8000/api/logs/list
 Скачать архив:
 
 ```powershell
-curl -L -H "Authorization: Bearer secret" -o mosobr_ai_logs.zip http://localhost:8000/api/logs/download
+curl -L -H "Authorization: Bearer secret" -o kait_ai_logs.zip http://localhost:8000/api/logs/download
 ```
 
 ## Через Docker

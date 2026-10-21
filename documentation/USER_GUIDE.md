@@ -32,10 +32,10 @@ Web-демо использует тот же публичный endpoint `/ambi
 Добавь в HTML страницы:
 
 ```html
-<script src="http://localhost:8000/static/mosobr-widget.js"></script>
+<script src="http://localhost:8000/static/kait-widget.js"></script>
 
 <script>
-  MosobrWidget.init({
+  KaitWidget.init({
     apiUrl: "http://localhost:8000/ambi/v1/dialog",
     title: "AI - Амбассадор профессий Амби"
   });

@@ -8,14 +8,14 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
     env:
-      APP_NAME: MosObr AI
+      APP_NAME: KAIT.ai
       APP_ENV: ci
       OLLAMA_HOST: http://localhost:11434
       OLLAMA_MODEL: qwen2.5:7b
       EMBEDDING_MODEL: BAAI/bge-m3
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"
-      POSTGRES_DB: mosobr_ai
+      POSTGRES_DB: kait_ai
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       DATA_PATH: ./data/colleges.json

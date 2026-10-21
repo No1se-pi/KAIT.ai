@@ -1,5 +1,5 @@
 (function () {
-  const DEFAULT_TITLE = "AI - Амбассадор профессий Амби";
+  const DEFAULT_TITLE = "KAIT.ai";
   const DEFAULT_API = "/ambi/v1/dialog";
   const LINK_RE = /((?:https?:\/\/|www\.)[^\s<>"']+|(?:[a-z0-9-]+\.)+(?:ru|com|org|net|edu|gov|рф)(?:\/[^\s<>"']*)?|мос\.ру(?:\/[^\s<>"']*)?)/gi;
   const AMBI_AVATAR_SVG = `
@@ -38,12 +38,12 @@
   const GREETING_TEXT = "Привет! Я - Амби, AI-амбассадор колледжей Москвы, помогаю выбрать профессию и ознакомиться с поступлением в колледжи Москвы.\nДавай выберем, с чего начать.";
 
   function ensureStyles() {
-    if (document.getElementById("mosobr-widget-style")) return;
+    if (document.getElementById("kait-widget-style")) return;
 
     const style = document.createElement("style");
-    style.id = "mosobr-widget-style";
+    style.id = "kait-widget-style";
     style.textContent = `
-      .mosobr-launcher {
+      .kait-launcher {
         position: fixed;
         right: 22px;
         bottom: 22px;
@@ -59,12 +59,12 @@
         transition: transform .16s ease, box-shadow .16s ease;
       }
 
-      .mosobr-launcher:hover {
+      .kait-launcher:hover {
         transform: translateY(-2px);
         box-shadow: 0 22px 52px rgba(159, 18, 57, .32);
       }
 
-      .mosobr-panel {
+      .kait-panel {
         position: fixed;
         right: 22px;
         bottom: 106px;
@@ -82,9 +82,9 @@
         font-family: Arial, sans-serif;
       }
 
-      .mosobr-panel.is-open { display: flex; }
+      .kait-panel.is-open { display: flex; }
 
-      .mosobr-header {
+      .kait-header {
         min-height: 78px;
         padding: 14px 16px;
         display: flex;
@@ -96,18 +96,18 @@
         color: #fff;
       }
 
-      .mosobr-brand {
+      .kait-brand {
         min-width: 0;
         display: flex;
         align-items: center;
         gap: 12px;
       }
 
-      .mosobr-title { min-width: 0; }
-      .mosobr-title strong { display: block; font-size: 17px; line-height: 1.2; }
-      .mosobr-title span { display: block; margin-top: 4px; color: rgba(255, 255, 255, .84); font-size: 12px; }
+      .kait-title { min-width: 0; }
+      .kait-title strong { display: block; font-size: 17px; line-height: 1.2; }
+      .kait-title span { display: block; margin-top: 4px; color: rgba(255, 255, 255, .84); font-size: 12px; }
 
-      .mosobr-icon-button {
+      .kait-icon-button {
         width: 34px;
         height: 34px;
         flex: 0 0 auto;
@@ -119,9 +119,9 @@
         cursor: pointer;
       }
 
-      .mosobr-icon-button:hover { background: rgba(255, 255, 255, .24); }
+      .kait-icon-button:hover { background: rgba(255, 255, 255, .24); }
 
-      .mosobr-ambi-avatar {
+      .kait-ambi-avatar {
         display: inline-flex;
         align-items: center;
         justify-content: center;
@@ -129,32 +129,32 @@
         border-radius: 50%;
       }
 
-      .mosobr-ambi-avatar svg {
+      .kait-ambi-avatar svg {
         display: block;
         width: 100%;
         height: 100%;
       }
 
-      .mosobr-ambi-avatar.launcher {
+      .kait-ambi-avatar.launcher {
         width: 58px;
         height: 58px;
         margin: 6px;
       }
 
-      .mosobr-ambi-avatar.header {
+      .kait-ambi-avatar.header {
         width: 48px;
         height: 48px;
         background: #fff;
         box-shadow: 0 8px 20px rgba(111, 10, 31, .22);
       }
 
-      .mosobr-ambi-avatar.message {
+      .kait-ambi-avatar.message {
         width: 34px;
         height: 34px;
         margin-top: 2px;
       }
 
-      .mosobr-messages {
+      .kait-messages {
         flex: 1;
         min-height: 0;
         overflow-y: auto;
@@ -167,22 +167,22 @@
           linear-gradient(180deg, #fffafb 0%, #f7f9fe 100%);
       }
 
-      .mosobr-message-row {
+      .kait-message-row {
         display: flex;
         align-items: flex-start;
         gap: 9px;
         max-width: 100%;
       }
 
-      .mosobr-message-row.bot { align-self: flex-start; max-width: 94%; }
-      .mosobr-message-row.user { align-self: flex-end; justify-content: flex-end; max-width: 88%; }
-      .mosobr-message-row.system {
+      .kait-message-row.bot { align-self: flex-start; max-width: 94%; }
+      .kait-message-row.user { align-self: flex-end; justify-content: flex-end; max-width: 88%; }
+      .kait-message-row.system {
         align-self: center;
         justify-content: center;
         max-width: 100%;
       }
 
-      .mosobr-message {
+      .kait-message {
         padding: 12px 14px;
         border-radius: 8px;
         white-space: pre-wrap;
@@ -191,25 +191,25 @@
         line-height: 1.45;
       }
 
-      .mosobr-message.bot { background: #fff; border: 1px solid #ffd3da; box-shadow: 0 6px 18px rgba(159, 18, 57, .08); }
-      .mosobr-message.user { background: #eef6ff; border: 1px solid #cae0ff; color: #102a56; }
-      .mosobr-message a {
+      .kait-message.bot { background: #fff; border: 1px solid #ffd3da; box-shadow: 0 6px 18px rgba(159, 18, 57, .08); }
+      .kait-message.user { background: #eef6ff; border: 1px solid #cae0ff; color: #102a56; }
+      .kait-message a {
         color: #c90f25;
         font-weight: 700;
         text-decoration: underline;
         text-underline-offset: 2px;
       }
 
-      .mosobr-message a:hover { color: #8f1027; }
+      .kait-message a:hover { color: #8f1027; }
 
-      .mosobr-message.system {
+      .kait-message.system {
         padding: 4px;
         background: transparent;
         color: #667085;
         font-size: 12px;
       }
 
-      .mosobr-suggestions {
+      .kait-suggestions {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
@@ -218,7 +218,7 @@
         background: #fff;
       }
 
-      .mosobr-chip {
+      .kait-chip {
         border: 1px solid #f1bdc7;
         border-radius: 8px;
         background: #fff;
@@ -228,17 +228,17 @@
         cursor: pointer;
       }
 
-      .mosobr-chip:hover { background: #fff5f7; }
-      .mosobr-chip.secondary { color: #475467; font-weight: 500; }
+      .kait-chip:hover { background: #fff5f7; }
+      .kait-chip.secondary { color: #475467; font-weight: 500; }
 
-      .mosobr-form {
+      .kait-form {
         display: flex;
         gap: 8px;
         padding: 12px 14px 14px;
         background: #fff;
       }
 
-      .mosobr-input {
+      .kait-input {
         flex: 1;
         min-width: 0;
         height: 46px;
@@ -249,12 +249,12 @@
         outline: none;
       }
 
-      .mosobr-input:focus {
+      .kait-input:focus {
         border-color: #e3132c;
         box-shadow: 0 0 0 3px rgba(227, 19, 44, .12);
       }
 
-      .mosobr-send {
+      .kait-send {
         width: 50px;
         height: 46px;
         border: 0;
@@ -265,17 +265,17 @@
         cursor: pointer;
       }
 
-      .mosobr-send:hover { background: #c90f25; }
+      .kait-send:hover { background: #c90f25; }
 
-      .mosobr-send:disabled,
-      .mosobr-input:disabled {
+      .kait-send:disabled,
+      .kait-input:disabled {
         opacity: .58;
         cursor: not-allowed;
       }
 
       @media (max-width: 520px) {
-        .mosobr-launcher { right: 14px; bottom: 14px; }
-        .mosobr-panel {
+        .kait-launcher { right: 14px; bottom: 14px; }
+        .kait-panel {
           right: 8px;
           bottom: 92px;
           width: calc(100vw - 16px);
@@ -288,7 +288,7 @@
 
   function createAmbiAvatar(size) {
     const node = document.createElement("span");
-    node.className = "mosobr-ambi-avatar " + (size || "");
+    node.className = "kait-ambi-avatar " + (size || "");
     node.innerHTML = AMBI_AVATAR_SVG;
     return node;
   }
@@ -339,10 +339,10 @@
   }
 
   function getOrCreateUserId() {
-    let userId = localStorage.getItem("mosobr_widget_user_id");
+    let userId = localStorage.getItem("kait_widget_user_id");
     if (!userId) {
       userId = "site_" + (crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36));
-      localStorage.setItem("mosobr_widget_user_id", userId);
+      localStorage.setItem("kait_widget_user_id", userId);
     }
     return userId;
   }
@@ -370,61 +370,61 @@
 
     const config = Object.assign({ apiUrl: DEFAULT_API, title: DEFAULT_TITLE }, options || {});
     const userId = getOrCreateUserId();
-    let sessionId = localStorage.getItem("mosobr_widget_session_id");
-    let userType = localStorage.getItem("mosobr_widget_user_type");
+    let sessionId = localStorage.getItem("kait_widget_session_id");
+    let userType = localStorage.getItem("kait_widget_user_type");
     let loading = false;
 
     const launcher = document.createElement("button");
-    launcher.className = "mosobr-launcher";
+    launcher.className = "kait-launcher";
     launcher.type = "button";
     launcher.title = "Открыть чат";
     launcher.setAttribute("aria-label", "Открыть чат с Амби");
     launcher.appendChild(createAmbiAvatar("launcher"));
 
     const panel = document.createElement("section");
-    panel.className = "mosobr-panel";
+    panel.className = "kait-panel";
     panel.setAttribute("aria-label", config.title);
     panel.innerHTML = `
-      <div class="mosobr-header">
-        <div class="mosobr-brand">
-          <span class="mosobr-header-avatar"></span>
-          <div class="mosobr-title">
+      <div class="kait-header">
+        <div class="kait-brand">
+          <span class="kait-header-avatar"></span>
+          <div class="kait-title">
             <strong></strong>
             <span>AI-помощник поступления в колледжи Москвы</span>
           </div>
         </div>
-        <button class="mosobr-icon-button" type="button" title="Свернуть" aria-label="Свернуть">&times;</button>
+        <button class="kait-icon-button" type="button" title="Свернуть" aria-label="Свернуть">&times;</button>
       </div>
-      <div class="mosobr-messages"></div>
-      <div class="mosobr-suggestions"></div>
-      <form class="mosobr-form">
-        <input class="mosobr-input" autocomplete="off" placeholder="Напишите вопрос..." />
-        <button class="mosobr-send" type="submit" title="Отправить">&gt;</button>
+      <div class="kait-messages"></div>
+      <div class="kait-suggestions"></div>
+      <form class="kait-form">
+        <input class="kait-input" autocomplete="off" placeholder="Напишите вопрос..." />
+        <button class="kait-send" type="submit" title="Отправить">&gt;</button>
       </form>
     `;
 
     document.body.appendChild(launcher);
     document.body.appendChild(panel);
 
-    const title = panel.querySelector(".mosobr-title strong");
-    const headerAvatar = panel.querySelector(".mosobr-header-avatar");
-    const closeButton = panel.querySelector(".mosobr-icon-button");
-    const messages = panel.querySelector(".mosobr-messages");
-    const suggestions = panel.querySelector(".mosobr-suggestions");
-    const form = panel.querySelector(".mosobr-form");
-    const input = panel.querySelector(".mosobr-input");
-    const sendButton = panel.querySelector(".mosobr-send");
+    const title = panel.querySelector(".kait-title strong");
+    const headerAvatar = panel.querySelector(".kait-header-avatar");
+    const closeButton = panel.querySelector(".kait-icon-button");
+    const messages = panel.querySelector(".kait-messages");
+    const suggestions = panel.querySelector(".kait-suggestions");
+    const form = panel.querySelector(".kait-form");
+    const input = panel.querySelector(".kait-input");
+    const sendButton = panel.querySelector(".kait-send");
     title.textContent = config.title;
     headerAvatar.appendChild(createAmbiAvatar("header"));
 
     function addMessage(role, text) {
       const row = document.createElement("div");
-      row.className = "mosobr-message-row " + role;
+      row.className = "kait-message-row " + role;
       if (role === "bot") {
         row.appendChild(createAmbiAvatar("message"));
       }
       const node = document.createElement("div");
-      node.className = "mosobr-message " + role;
+      node.className = "kait-message " + role;
       appendLinkedText(node, text);
       row.appendChild(node);
       messages.appendChild(row);
@@ -456,7 +456,7 @@
         if (!label) return;
         const chip = document.createElement("button");
         chip.type = "button";
-        chip.className = "mosobr-chip" + (label === LABELS.end ? " secondary" : "");
+        chip.className = "kait-chip" + (label === LABELS.end ? " secondary" : "");
         chip.textContent = label;
         chip.addEventListener("click", () => {
           if (label === LABELS.end) {
@@ -483,8 +483,8 @@
     function startScreen() {
       sessionId = null;
       userType = "applicant";
-      localStorage.removeItem("mosobr_widget_session_id");
-      localStorage.setItem("mosobr_widget_user_type", userType);
+      localStorage.removeItem("kait_widget_session_id");
+      localStorage.setItem("kait_widget_user_type", userType);
       messages.innerHTML = "";
       addMessage("bot", GREETING_TEXT);
       setSuggestions(MAIN_MENU_SUGGESTIONS);
@@ -517,15 +517,15 @@
 
         const data = await response.json();
         sessionId = data.session_id;
-        localStorage.setItem("mosobr_widget_session_id", sessionId);
+        localStorage.setItem("kait_widget_session_id", sessionId);
 
         if (value === LABELS.parent || action === "set_user_type_parent") {
           userType = "parent";
-          localStorage.setItem("mosobr_widget_user_type", userType);
+          localStorage.setItem("kait_widget_user_type", userType);
         }
         if (value === LABELS.applicant || action === "set_user_type_applicant") {
           userType = "applicant";
-          localStorage.setItem("mosobr_widget_user_type", userType);
+          localStorage.setItem("kait_widget_user_type", userType);
         }
 
         if (data.expired_previous_session) {
@@ -552,8 +552,8 @@
 
       sessionId = null;
       userType = null;
-      localStorage.removeItem("mosobr_widget_session_id");
-      localStorage.removeItem("mosobr_widget_user_type");
+      localStorage.removeItem("kait_widget_session_id");
+      localStorage.removeItem("kait_widget_user_type");
       startScreen();
     }
 
@@ -587,7 +587,7 @@
     };
   }
 
-  window.MosobrWidget = {
+  window.KaitWidget = {
     init: createWidget,
   };
 })();

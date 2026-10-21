@@ -23,7 +23,7 @@ http://localhost:8000/docs
 ```json
 {
   "status": "ok",
-  "service": "mosobr-ai-api",
+  "service": "kait-ai-api",
   "database_ready": true,
   "documents_ready": true,
   "rag_ready": true,
@@ -219,15 +219,15 @@ Response:
 http://localhost:8000/api/demo
 ```
 
-## GET /static/mosobr-widget.js
+## GET /static/kait-widget.js
 
 Отдаёт чистый JS-виджет без React и сборщика. Пример вставки:
 
 ```html
-<script src="http://localhost:8000/static/mosobr-widget.js"></script>
+<script src="http://localhost:8000/static/kait-widget.js"></script>
 
 <script>
-  MosobrWidget.init({
+  KaitWidget.init({
     apiUrl: "http://localhost:8000/ambi/v1/dialog",
     title: "AI - Амбассадор профессий Амби"
   });

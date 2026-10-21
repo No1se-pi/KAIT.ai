@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MosObr AI Widget Demo</title>
+  <title>KAIT.ai Widget Demo</title>
   <style>
     :root {
       color-scheme: light;
@@ -157,23 +157,23 @@
         <strong>Код для сайта</strong>
         <button class="copy" type="button" onclick="copyEmbed()">Скопировать</button>
       </div>
-      <pre id="embedCode">&lt;script src="http://localhost:8000/static/mosobr-widget.js"&gt;&lt;/script&gt;
+      <pre id="embedCode">&lt;script src="http://localhost:8000/static/kait-widget.js"&gt;&lt;/script&gt;
 
 &lt;script&gt;
-  MosobrWidget.init({
+  KaitWidget.init({
     apiUrl: "http://localhost:8000/ambi/v1/dialog",
-    title: "AI - Амбассадор профессий Амби"
+    title: "KAIT.ai"
   });
 &lt;/script&gt;</pre>
       <div class="status" id="copyStatus">Готово для вставки в HTML страницы.</div>
     </section>
   </main>
 
-  <script src="/static/mosobr-widget.js"></script>
+  <script src="/static/kait-widget.js"></script>
   <script>
-    const widget = MosobrWidget.init({
+    const widget = KaitWidget.init({
       apiUrl: window.location.origin + "/ambi/v1/dialog",
-      title: "AI - Амбассадор профессий Амби"
+      title: "KAIT.ai"
     });
     widget.open();
 

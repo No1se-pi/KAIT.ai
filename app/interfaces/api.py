@@ -34,7 +34,7 @@ settings = get_settings()
 
 SESSION_TTL_MINUTES = 30
 DEMO_HTML_PATH = Path(__file__).with_name("demo_chat.html")
-WIDGET_JS_PATH = Path(__file__).with_name("mosobr-widget.js")
+WIDGET_JS_PATH = Path(__file__).with_name("kait-widget.js")
 LOGS_DIR = Path(os.getenv("LOGS_DIR", "/app/logs"))
 API_WAIT_FOR_DOCUMENTS = os.getenv("API_WAIT_FOR_DOCUMENTS", "1").strip().lower() not in {"0", "false", "no", "off"}
 PUBLIC_CHAT_PATH = os.getenv("PUBLIC_CHAT_PATH", "/ambi/v1/dialog").strip() or "/ambi/v1/dialog"
@@ -149,7 +149,7 @@ def client_ip(request: Request) -> str:
 
 
 app = FastAPI(
-    title="MosObr AI API",
+    title="KAIT.ai API",
     description="HTTP API для локального AI-помощника по колледжам Москвы.",
     version="1.0.0",
 )
@@ -488,7 +488,7 @@ def health() -> dict[str, str | int | bool]:
 
     return {
         "status": "ok",
-        "service": "mosobr-ai-api",
+        "service": "kait-ai-api",
         "database_ready": database_ready,
         "documents_ready": docs_ready,
         "rag_ready": database_ready and docs_ready,
@@ -653,19 +653,19 @@ def demo() -> HTMLResponse:
         return HTMLResponse(DEMO_HTML_PATH.read_text(encoding="utf-8"))
 
     return HTMLResponse(
-        "<h1>MosObr AI API</h1><p>Файл demo_chat.html не найден.</p>",
+        "<h1>KAIT.ai API</h1><p>Файл demo_chat.html не найден.</p>",
         status_code=200,
     )
 
 
-@app.get("/static/mosobr-widget.js")
+@app.get("/static/kait-widget.js")
 def widget_js() -> FileResponse:
     if not WIDGET_JS_PATH.exists():
         raise HTTPException(status_code=404, detail="Widget file is missing")
     return FileResponse(
         path=str(WIDGET_JS_PATH),
         media_type="application/javascript; charset=utf-8",
-        filename="mosobr-widget.js",
+        filename="kait-widget.js",
     )
 
 
@@ -711,7 +711,7 @@ def download_logs(_access: None = Depends(require_logs_access)) -> FileResponse:
     Если логов ещё нет, всё равно отдаёт zip с README.txt.
     """
     tmp = tempfile.NamedTemporaryFile(
-        prefix="mosobr_ai_logs_",
+        prefix="kait_ai_logs_",
         suffix=".zip",
         delete=False,
     )
@@ -739,5 +739,5 @@ def download_logs(_access: None = Depends(require_logs_access)) -> FileResponse:
     return FileResponse(
         path=str(tmp_path),
         media_type="application/zip",
-        filename="mosobr_ai_logs.zip",
+        filename="kait_ai_logs.zip",
     )

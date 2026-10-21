@@ -23,7 +23,7 @@ def data_source_paths(settings: Settings | None = None) -> list[tuple[str, Path]
 
 def compute_data_fingerprint(paths: Iterable[tuple[str, Path]]) -> str:
     digest = hashlib.sha256()
-    digest.update(f"mosobr-data-v{DATA_FINGERPRINT_VERSION}\0".encode("utf-8"))
+    digest.update(f"kait-data-v{DATA_FINGERPRINT_VERSION}\0".encode("utf-8"))
 
     for label, path in paths:
         digest.update(str(label).encode("utf-8"))

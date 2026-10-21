@@ -1,4 +1,4 @@
-# mosobr_ai
+# KAIT.ai
 
 Локальный AI-помощник по профориентации и колледжам Москвы.
 
@@ -120,12 +120,12 @@ http://localhost:8000/api/demo
 Для вставки на сайт:
 
 ```html
-<script src="http://localhost:8000/static/mosobr-widget.js"></script>
+<script src="http://localhost:8000/static/kait-widget.js"></script>
 
 <script>
-  MosobrWidget.init({
+  KaitWidget.init({
     apiUrl: "http://localhost:8000/ambi/v1/dialog",
-    title: "AI - Амбассадор профессий Амби"
+    title: "KAIT.ai"
   });
 </script>
 ```
