@@ -4,28 +4,17 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    app_name: str
+    app_name: str = "KAIT.ai"
     app_env: str = "dev"
     log_level: str = "INFO"
 
-    ollama_host: str
-    ollama_model: str
-
-    hf_home: str | None = None
-    sentence_transformers_home: str | None = None
-
-    embedding_model: str
-
-    postgres_host: str
+    postgres_host: str = "localhost"
     postgres_port: int = 5432
-    postgres_db: str
-    postgres_user: str
-    postgres_password: str
+    postgres_db: str = "kait_ai"
+    postgres_user: str = "postgres"
+    postgres_password: str = "postgres"
 
-    data_path: str
-    faq_data_path: str = "./data/faq_admission.json"
-    weeek_knowledge_path: str = "./data/weeek_knowledge.json"
-    top_k: int = 5
+    data_path: str = "./data/colleges.json"
 
     model_config = SettingsConfigDict(
         env_file=".env",

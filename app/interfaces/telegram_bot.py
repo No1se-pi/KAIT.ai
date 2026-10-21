@@ -22,7 +22,7 @@ from telegram.ext import (
 )
 
 from app.interfaces.tg_adapter import TelegramChatAdapter
-from app.services.scenario_service import END_SESSION_BUTTON, MAIN_MENU, action_for_label
+from app.services.kait_assistant import END_SESSION_BUTTON, MAIN_MENU, action_for_label
 
 try:
     from app.config import get_settings
@@ -258,36 +258,7 @@ def remember_callback_labels(context: ContextTypes.DEFAULT_TYPE, labels: dict[st
 
 
 def callback_action_is_button_only(action: str) -> bool:
-    if action.startswith(("industry:", "pick:", "admission_topic:")):
-        return True
-    return action in {
-        "set_user_type_parent",
-        "set_user_type_applicant",
-        "main_menu",
-        "back",
-        "route_college",
-        "find_college",
-        "help_choose_college",
-        "college_contacts",
-        "college_specialties",
-        "college_admission",
-        "college_question",
-        "new_search",
-        "show_more_colleges",
-        "college_specialty_yes",
-        "college_specialty_no",
-        "college_specialty_unknown",
-        "route_profession",
-        "choose_industry",
-        "know_profession",
-        "unknown_profession",
-        "profession_industry_interest",
-        "show_colleges",
-        "show_more_specialties",
-        "route_admission",
-        "other_admission_question",
-        "route_custom",
-    }
+    return action.startswith(("kait_", "specialty:")) or action == "main_menu"
 
 
 def is_generating(context: ContextTypes.DEFAULT_TYPE) -> bool:

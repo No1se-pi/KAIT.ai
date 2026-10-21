@@ -8,25 +8,26 @@ from pathlib import Path
 import os
 import secrets
 import tempfile
+import threading
 import time
 import zipfile
 from typing import Any, Optional
 
-import requests
-from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
-from sqlalchemy import func, select, text
+from sqlalchemy import text
 
 import app.db.chat_models  # noqa: F401 - registers chat tables
 from app.db.chat_models import ensure_chat_session_runtime_schema
 from app.config import get_settings
 from app.db.session import SessionLocal
-from app.db.repository import Document, create_tables
+from app.db.repository import create_tables
 from app.db.session import engine
 from app.logger import get_logger
-from app.services.scenario_service import ScenarioService
+from app.interfaces.max_bot import MaxBotClient, MaxIncoming, parse_max_update
+from app.services.kait_assistant import KaitAssistantService
 from app.services.web_transcript_store import WebTranscriptStore
 
 logger = get_logger(__name__)
@@ -36,7 +37,6 @@ SESSION_TTL_MINUTES = 30
 DEMO_HTML_PATH = Path(__file__).with_name("demo_chat.html")
 WIDGET_JS_PATH = Path(__file__).with_name("kait-widget.js")
 LOGS_DIR = Path(os.getenv("LOGS_DIR", "/app/logs"))
-API_WAIT_FOR_DOCUMENTS = os.getenv("API_WAIT_FOR_DOCUMENTS", "1").strip().lower() not in {"0", "false", "no", "off"}
 PUBLIC_CHAT_PATH = os.getenv("PUBLIC_CHAT_PATH", "/ambi/v1/dialog").strip() or "/ambi/v1/dialog"
 LEGACY_CHAT_PATH = "/api/chat"
 LEGACY_SESSION_CLOSE_PATH = "/api/session/close"
@@ -55,7 +55,6 @@ def int_env(name: str, default: int, *, minimum: int = 0) -> int:
         return default
 
 
-OLLAMA_HEALTH_TIMEOUT_SECONDS = float(os.getenv("OLLAMA_HEALTH_TIMEOUT_SECONDS", "2"))
 MAX_USER_ID_LENGTH = int_env("API_MAX_USER_ID_CHARS", 128, minimum=1)
 MAX_SESSION_ID_LENGTH = int_env("API_MAX_SESSION_ID_CHARS", 128, minimum=1)
 MAX_MESSAGE_LENGTH = int_env("API_MAX_MESSAGE_CHARS", 4000, minimum=1)
@@ -150,8 +149,8 @@ def client_ip(request: Request) -> str:
 
 app = FastAPI(
     title="KAIT.ai API",
-    description="HTTP API для локального AI-помощника по колледжам Москвы.",
-    version="1.0.0",
+    description="Быстрый API помощника абитуриента КАИТ №20.",
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -229,8 +228,6 @@ def startup() -> None:
     wait_for_database()
     create_tables(engine)
     ensure_chat_session_runtime_schema(engine)
-    if API_WAIT_FOR_DOCUMENTS:
-        wait_for_documents()
 
 
 def wait_for_database() -> None:
@@ -250,32 +247,6 @@ def wait_for_database() -> None:
     raise RuntimeError("Database did not become ready in time")
 
 
-def get_document_counts() -> dict[str, int]:
-    db = SessionLocal()
-    try:
-        total = int(db.scalar(select(func.count()).select_from(Document)) or 0)
-        faq = int(db.scalar(select(func.count()).select_from(Document).where(Document.doc_type == "faq")) or 0)
-        weeek = int(
-            db.scalar(
-                select(func.count())
-                .select_from(Document)
-                .where(Document.metadata_json["source_type"].as_string() == "weeek")
-            )
-            or 0
-        )
-        college = int(db.scalar(select(func.count()).select_from(Document).where(Document.doc_type == "college")) or 0)
-        specialty = int(db.scalar(select(func.count()).select_from(Document).where(Document.doc_type == "specialty")) or 0)
-        return {
-            "total": total,
-            "faq": faq,
-            "weeek": weeek,
-            "college": college,
-            "specialty": specialty,
-        }
-    finally:
-        db.close()
-
-
 def check_database_ready() -> bool:
     try:
         with engine.connect() as conn:
@@ -284,38 +255,6 @@ def check_database_ready() -> bool:
     except Exception as exc:
         logger.warning("[API] Health database check failed: %s", exc)
         return False
-
-
-def documents_ready(counts: dict[str, int]) -> bool:
-    return counts["faq"] > 0 and counts["college"] > 0 and counts["specialty"] > 0
-
-
-def check_ollama_ready() -> bool:
-    try:
-        # Health must be cheap: /api/tags checks Ollama without text generation.
-        url = f"{settings.ollama_host.rstrip('/')}/api/tags"
-        response = requests.get(url, timeout=OLLAMA_HEALTH_TIMEOUT_SECONDS)
-        response.raise_for_status()
-        return True
-    except Exception as exc:
-        logger.info("[API] Ollama health check failed: %s", exc)
-        return False
-
-
-def wait_for_documents() -> None:
-    attempts = int(os.getenv("API_DOCUMENT_WAIT_ATTEMPTS", "180"))
-    delay = float(os.getenv("API_DOCUMENT_WAIT_DELAY", "2"))
-
-    # API can start before ingest finishes, so we wait for all RAG document types.
-    for attempt in range(1, attempts + 1):
-        counts = get_document_counts()
-        if counts["faq"] > 0 and counts["college"] > 0 and counts["specialty"] > 0:
-            logger.info("[API] Documents are ready: %s", counts)
-            return
-        logger.warning("[API] Documents are not ready yet (%s/%s): %s", attempt, attempts, counts)
-        time.sleep(delay)
-
-    raise RuntimeError("Documents did not become ready in time")
 
 
 def env_flag(name: str, default: bool = False) -> bool:
@@ -365,15 +304,19 @@ class ApiSessionState:
 
 
 site_sessions: dict[str, ApiSessionState] = {}
-_scenario_service: ScenarioService | None = None
+_scenario_service: KaitAssistantService | None = None
 _web_transcripts: WebTranscriptStore | None = None
+_max_client: MaxBotClient | None = None
+max_sessions: dict[str, str] = {}
+processed_max_events: dict[str, float] = {}
+processed_max_events_lock = threading.Lock()
 
 
-def get_scenario_service() -> ScenarioService:
+def get_scenario_service() -> KaitAssistantService:
     global _scenario_service
     if _scenario_service is None:
-        logger.info("[API] Инициализация ScenarioService")
-        _scenario_service = ScenarioService()
+        logger.info("[API] Инициализация быстрого KAIT Assistant")
+        _scenario_service = KaitAssistantService()
     return _scenario_service
 
 
@@ -382,6 +325,13 @@ def get_web_transcripts() -> WebTranscriptStore:
     if _web_transcripts is None:
         _web_transcripts = WebTranscriptStore(LOGS_DIR / "web_sessions")
     return _web_transcripts
+
+
+def get_max_client() -> MaxBotClient:
+    global _max_client
+    if _max_client is None:
+        _max_client = MaxBotClient()
+    return _max_client
 
 
 def append_web_event(
@@ -416,8 +366,8 @@ def is_expired(state: ApiSessionState) -> bool:
 
 def get_effective_session_id(user_id: str, incoming_session_id: str | None) -> tuple[str | None, bool]:
     """
-    Возвращает session_id, который надо передать в chat_service.
-    Если старая API-сессия протухла, возвращает None, чтобы chat_service создал новую.
+    Возвращает session_id, который надо передать помощнику.
+    Если старая API-сессия протухла, возвращает None для создания новой.
     """
     if incoming_session_id:
         state = site_sessions.get(user_id)
@@ -462,6 +412,7 @@ class ChatResponse(BaseModel):
     suggestions: list[SuggestionItem] = Field(default_factory=list)
     suggestion_labels: list[str] = Field(default_factory=list)
     expired_previous_session: bool = False
+    latency_ms: float = 0.0
 
 
 class SessionRequest(BaseModel):
@@ -477,23 +428,13 @@ class SessionResponse(BaseModel):
 @app.get("/api/health")
 def health() -> dict[str, str | int | bool]:
     database_ready = check_database_ready()
-    try:
-        counts = get_document_counts() if database_ready else {"total": -1, "faq": -1, "college": -1, "specialty": -1}
-    except Exception:
-        counts = {"total": -1, "faq": -1, "college": -1, "specialty": -1}
-        database_ready = False
-
-    docs_ready = documents_ready(counts)
-    ollama_ready = check_ollama_ready()
 
     return {
         "status": "ok",
         "service": "kait-ai-api",
         "database_ready": database_ready,
-        "documents_ready": docs_ready,
-        "rag_ready": database_ready and docs_ready,
-        "ollama_ready": ollama_ready,
-        "ollama_model": settings.ollama_model,
+        "knowledge_ready": True,
+        "assistant_scope": "KAIT No. 20",
         "active_site_sessions": len(site_sessions),
         "session_ttl_minutes": SESSION_TTL_MINUTES,
         "logs_dir": str(LOGS_DIR),
@@ -507,11 +448,62 @@ def health() -> dict[str, str | int | bool]:
         "cors_restricted": "*" not in allowed_cors_origins(),
         "trust_proxy_headers": api_trust_proxy_headers(),
         "rate_limit_per_minute": rate_limit_per_minute(),
-        "documents_total": counts["total"],
-        "documents_faq": counts["faq"],
-        "documents_college": counts["college"],
-        "documents_specialty": counts["specialty"],
+        "max_bot_configured": get_max_client().configured,
+        "max_webhook_secret_configured": bool(os.getenv("MAX_WEBHOOK_SECRET", "").strip()),
     }
+
+
+def process_max_event(incoming: MaxIncoming) -> None:
+    db = SessionLocal()
+    try:
+        result = get_scenario_service().ask(
+            db=db,
+            user_id=f"max:{incoming.user_id}",
+            message=incoming.text,
+            session_id=max_sessions.get(incoming.user_id),
+            action=incoming.action,
+        )
+        max_sessions[incoming.user_id] = str(result["session_id"])
+        get_max_client().send_answer(
+            chat_id=incoming.chat_id,
+            text=str(result["answer"]),
+            buttons=[item for item in result.get("suggestion_buttons", []) if isinstance(item, dict)],
+        )
+    except Exception:
+        logger.exception("MAX event processing failed: event_id=%s", incoming.event_id)
+    finally:
+        db.close()
+
+
+@app.post("/integrations/max/webhook", include_in_schema=False)
+def max_webhook(
+    payload: dict[str, Any],
+    background_tasks: BackgroundTasks,
+    x_max_bot_api_secret: str | None = Header(default=None),
+) -> dict[str, bool]:
+    expected = os.getenv("MAX_WEBHOOK_SECRET", "").strip()
+    if not expected:
+        raise HTTPException(status_code=503, detail="MAX_WEBHOOK_SECRET is not configured")
+    if expected and (
+        not x_max_bot_api_secret
+        or not secrets.compare_digest(expected, x_max_bot_api_secret)
+    ):
+        raise HTTPException(status_code=403, detail="Invalid MAX webhook secret")
+
+    incoming = parse_max_update(payload)
+    if incoming is None:
+        return {"ok": True}
+
+    now = time.monotonic()
+    with processed_max_events_lock:
+        stale = [event_id for event_id, seen_at in processed_max_events.items() if now - seen_at > 3600]
+        for event_id in stale:
+            processed_max_events.pop(event_id, None)
+        if incoming.event_id in processed_max_events:
+            return {"ok": True}
+        processed_max_events[incoming.event_id] = now
+    background_tasks.add_task(process_max_event, incoming)
+    return {"ok": True}
 
 
 @app.post(LEGACY_CHAT_PATH, response_model=ChatResponse, include_in_schema=False)
@@ -600,6 +592,7 @@ def chat(request: ChatRequest, http_request: Request) -> ChatResponse:
         suggestions=suggestions,
         suggestion_labels=suggestion_labels,
         expired_previous_session=expired,
+        latency_ms=float(result.get("latency_ms") or 0.0),
     )
 
 

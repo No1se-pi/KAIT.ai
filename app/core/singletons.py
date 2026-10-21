@@ -1,42 +1,8 @@
 from functools import lru_cache
 
-from app.llm.ollama_client import OllamaClient
-from app.rag.embedder import Embedder
-from app.rag.retriever import Retriever
-from app.services.chat_service import ChatService
-from app.services.scenario_service import ScenarioService
-from app.services.session_service import SessionService
+from app.services.kait_assistant import KaitAssistantService
 
 
 @lru_cache
-def get_embedder() -> Embedder:
-    return Embedder()
-
-
-@lru_cache
-def get_ollama_client() -> OllamaClient:
-    return OllamaClient()
-
-
-@lru_cache
-def get_session_service() -> SessionService:
-    return SessionService()
-
-
-@lru_cache
-def get_retriever() -> Retriever:
-    return Retriever()
-
-
-@lru_cache
-def get_chat_service() -> ChatService:
-    return ChatService(
-        retriever=get_retriever(),
-        session_service=get_session_service(),
-        llm_client=get_ollama_client(),
-    )
-
-
-@lru_cache
-def get_scenario_service() -> ScenarioService:
-    return ScenarioService(chat_service=get_chat_service(), session_service=get_session_service())
+def get_scenario_service() -> KaitAssistantService:
+    return KaitAssistantService()

@@ -1,199 +1,74 @@
 # KAIT.ai
 
-Локальный AI-помощник по профориентации и колледжам Москвы.
+Быстрый цифровой помощник абитуриента Колледжа автоматизации и информационных технологий №20.
 
-Проект помогает школьнику или абитуриенту:
-- подобрать колледжи и специальности из локальной базы;
-- получить ответы на частые вопросы о поступлении;
-- уточнить контакты и сайт колледжа;
-- получить профориентационную подсказку;
-- протестировать один и тот же AI-сервис через Telegram-бота, REST API или web-демо.
+Один сервис обслуживает три канала:
 
-Система работает локально: данные лежат в JSON и PostgreSQL, поиск идет через RAG, ответы формирует локальная LLM через Ollama. RAG снижает риск галлюцинаций, но не дает абсолютной гарантии точности, поэтому важные правила приема нужно сверять с Атласом профессий, сайтом колледжа или приемной комиссией.
+- Telegram-бот;
+- бот MAX через защищённый webhook;
+- HTTP API и встраиваемый web-виджет.
 
-## Что Уже Есть
+## Почему отвечает быстро
 
-- FastAPI HTTP API.
-- Telegram-бот.
-- HTML-демо web-чата.
-- Docker Compose для `app`, `api`, `db`.
-- Загрузка колледжей, FAQ и базы знаний Weeek из `data/`.
-- Embeddings на `BAAI/bge-m3`.
-- RAG-поиск: semantic similarity + keyword/domain rules.
-- Индексы `profession -> colleges` и `industry -> professions`.
-- История сессий, follow-up память и route state для сценарного UX.
-- Сценарный режим без отдельного выбора роли: после приветствия сразу открывается главное меню.
-- 4 основных маршрута: выбор колледжа, выбор профессии, порядок поступления, свой вопрос.
-- Telegram inline-кнопки и web-виджет с такими же маршрутами.
-- `suggestions` с понятными `label/action` для API, web и Telegram callback.
-- Пагинация `Показать ещё специальности` и `Показать ещё колледжи` без повторов.
-- Обработка сложных запросов: колледж + направление + поступление/льготы не теряются.
-- FAQ про льготы, особые основания и первоочередное право зачисления с мягкой формулировкой и связанными темами.
-- Детерминированные правила для интересов: работа с детьми ведёт в педагогику, ювелирные интересы - в ювелирные/ремесленные специальности.
-- Логирование web и Telegram диалогов.
-- Защита debug-ручек логов через env-флаг и bearer token.
-- Расширенный `/api/health`.
-- GitHub Actions CI: ruff, unittest, docker build, compose config.
+Каталог 12 программ КАИТ №20 загружается в память один раз. Типовые вопросы, подбор направления, контакты и поступление обрабатываются детерминированно без embeddings, полного сканирования PostgreSQL и ожидания LLM. PostgreSQL используется только для сессий и истории диалогов. API возвращает `latency_ms` для контроля задержки.
 
-## Важные Ограничения
-
-- `pgvector` есть в зависимостях, но текущий поиск еще хранит embeddings в JSON-поле и считает cosine similarity в Python.
-- Ollama не запускается внутри compose по умолчанию. Контейнеры обращаются к Ollama на хосте через `host.docker.internal`.
-- Первый запуск может быть долгим: скачивается embedding-модель и строятся векторы.
-- Качество ответов зависит от полноты `data/colleges.json`, `data/faq_admission.json` и `data/weeek_knowledge.json`.
-- Telegram-бот стартует только при валидном `TELEGRAM_BOT_TOKEN`.
-
-## Быстрый Запуск
-
-1. Скопировать пример переменных окружения:
+## Быстрый запуск
 
 ```powershell
 Copy-Item .env.example .env
+docker compose up --build -d
 ```
 
-2. Заполнить `.env`:
+API и демо:
+
+- `GET http://localhost:8000/api/health`
+- `POST http://localhost:8000/ambi/v1/dialog`
+- `GET http://localhost:8000/api/demo`
+- OpenAPI: `http://localhost:8000/docs`
+
+Пример запроса:
+
+```json
+{
+  "user_id": "site-user-1",
+  "message": "Люблю программировать, что выбрать?"
+}
+```
+
+## Telegram
+
+Укажите `TELEGRAM_BOT_TOKEN` в `.env`, затем запустите профиль:
+
+```powershell
+docker compose --profile telegram up --build -d
+```
+
+Сервис `app` запускает Telegram polling и использует то же ядро ответов, что сайт и MAX.
+
+## MAX
+
+Укажите в `.env`:
 
 ```env
-TELEGRAM_BOT_TOKEN=your_token
-OLLAMA_MODEL=qwen2.5:7b-instruct
+MAX_BOT_TOKEN=...
+MAX_WEBHOOK_SECRET=случайная-строка
 ```
 
-3. Установить и запустить Ollama на компьютере:
+Webhook: `POST https://ваш-домен/integrations/max/webhook`.
+
+В настройках подписки MAX используйте события `message_created`, `message_callback` и `bot_started`, а также тот же secret. Production webhook должен быть доступен по HTTPS на порту 443. API MAX вызывается через актуальный домен `platform-api2.max.ru`.
+
+## Данные
+
+Единственный рабочий источник — `data/colleges.json`, содержащий КАИТ №20 и 12 программ набора. Изменения контактов и программ следует сверять с официальными ресурсами:
+
+- https://priem.kait20.ru/
+- https://priem.kait20.ru/specialities
+- https://kait20.mskobr.ru/
+
+## Проверка
 
 ```powershell
-ollama pull qwen2.5:7b-instruct
-ollama list
+python -m unittest discover -s tests -v
+docker compose --env-file .env.example config -q
 ```
-
-4. Собрать и запустить проект:
-
-```powershell
-docker compose build
-docker compose up -d
-```
-
-5. Проверить состояние:
-
-```powershell
-docker compose ps
-docker compose logs -f api
-```
-
-API:
-
-```text
-http://localhost:8000/docs
-http://localhost:8000/api/demo
-http://localhost:8000/api/health
-```
-
-## Сценарный UX
-
-Новая сессия начинается с приветствия Амби и сразу открывает главное меню. По умолчанию используется дружелюбный тон для поступающего; старые role-кнопки поддерживаются только для совместимости с прежними клиентами.
-
-Пользователь выбирает один из маршрутов:
-1. Выбрать колледж
-2. Выбрать профессию
-3. Узнать о порядке поступления
-4. Свой вопрос
-
-В Telegram эти шаги показываются inline-кнопками. Нажатие обрабатывается через стабильные callback action-коды, например `route_profession`, `industry:education`, `pick:1`, `show_more_specialties`, `main_menu`.
-
-Сценарии хранят состояние в `chat_sessions.metadata_json`: `user_type`, `current_route`, `route_step`, `last_college`, `last_profession`, `last_industry`, `last_specialty`, `last_results`, `last_answer`, `tone_mode`.
-
-Для педагогики приоритет получают дошкольное образование, преподавание в начальных классах, коррекционная педагогика и педагогика дополнительного образования. Фразы вроде `работа с детьми`, `люблю объяснять`, `хочу помогать детям`, `вожатый` ведут в педагогическое направление, а не в IT или медицину. Вокал и музыка не попадают в топ без явного музыкального запроса.
-
-Ювелирные запросы (`ювелир`, `украшения`, `кольца`, `серьги`, `драгоценности`) сопоставляются с реальными вариантами в базе: `Ювелир`, `Технология обработки алмазов` и близкие декоративно-прикладные направления. Запросы про хакинг, пентест и кибербезопасность направляются в IT/ИБ/сети, а не в случайные производственные специальности.
-
-В маршруте поступления общий вопрос `Вступительные испытания` отвечает общо и отправляет к конкретному колледжу/специальности, а ОВЗ-шаблон используется только при явном контексте ОВЗ или специальных условий. После FAQ-ответов добавляется блок `Можно ещё посмотреть:` и такие же inline/action-кнопки.
-
-## Web-Виджет
-
-Демо доступно по адресу:
-
-```text
-http://localhost:8000/api/demo
-```
-
-Виджет использует те же маршруты и `label/action`-кнопки, что и API. На demo-странице есть блок с кодом вставки и кнопка `Скопировать`, которая копирует HTML/JS-код виджета в буфер обмена.
-
-Для вставки на сайт:
-
-```html
-<script src="http://localhost:8000/static/kait-widget.js"></script>
-
-<script>
-  KaitWidget.init({
-    apiUrl: "http://localhost:8000/ambi/v1/dialog",
-    title: "KAIT.ai"
-  });
-</script>
-```
-
-Для продакшена лучше задать `API_CORS_ORIGINS=https://домен-сайта.ru` и использовать публичный путь `PUBLIC_CHAT_PATH=/ambi/v1/dialog`. Старый `/api/chat` оставлен для совместимости и может быть выключен через `API_LEGACY_CHAT_ENABLED=false`. Если API стоит за nginx/Traefik, включайте `API_TRUST_PROXY_HEADERS=true` только когда proxy сам выставляет `X-Forwarded-*`.
-
-## Основные Команды
-
-```powershell
-docker compose up -d
-docker compose down
-docker compose restart
-docker compose logs -f app
-docker compose logs -f api
-docker compose logs -f db
-docker compose build app api
-```
-
-Обновить локальную базу знаний Weeek:
-
-```powershell
-.\venv\Scripts\python.exe scripts\fetch_weeek_knowledge.py
-```
-
-## Логи
-
-Логи лежат в `logs/` и монтируются в контейнеры как `/app/logs`.
-
-Ручки логов закрыты по умолчанию:
-
-```env
-API_LOGS_ENABLED=false
-API_LOGS_TOKEN=
-```
-
-Для локального доступа:
-
-```env
-API_LOGS_ENABLED=true
-API_LOGS_TOKEN=secret
-```
-
-Запрос:
-
-```powershell
-curl -H "Authorization: Bearer secret" http://localhost:8000/api/logs/list
-```
-
-## Документация
-
-- [API](documentation/API.md)
-- [Архитектура](documentation/ARCHITECTURE.md)
-- [Карта проекта](documentation/PROJECT_MAP.md)
-- [Деплой](documentation/DEPLOYMENT.md)
-- [Логи](documentation/LOGS.md)
-- [Сценарий демо](documentation/DEMO_SCRIPT.md)
-- [Пользовательский гайд](documentation/USER_GUIDE.md)
-- [Troubleshooting](documentation/TROUBLESHOOTING.md)
-- [GitHub checklist](documentation/GITHUB_CHECKLIST.md)
-
-## Проверки
-
-Локально после установки зависимостей:
-
-```powershell
-python -m unittest discover -s tests
-ruff check . --select E9,F63,F7,F82
-docker compose config --quiet
-```
-
-В GitHub Actions эти проверки запускаются автоматически на `push` и `pull_request`.

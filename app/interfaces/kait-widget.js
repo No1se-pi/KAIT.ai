@@ -30,12 +30,13 @@
     menu: "Главное меню",
   };
   const MAIN_MENU_SUGGESTIONS = [
-    { label: "Выбрать колледж", action: "route_college" },
-    { label: "Выбрать профессию", action: "route_profession" },
-    { label: "Узнать о порядке поступления", action: "route_admission" },
-    { label: "Свой вопрос", action: "route_custom" },
+    { label: "Специальности КАИТ", action: "kait_specialties" },
+    { label: "Подобрать направление", action: "kait_match" },
+    { label: "Поступление 2026", action: "kait_admission" },
+    { label: "Адреса и контакты", action: "kait_contacts" },
+    { label: "Задать свой вопрос", action: "kait_question" },
   ];
-  const GREETING_TEXT = "Привет! Я - Амби, AI-амбассадор колледжей Москвы, помогаю выбрать профессию и ознакомиться с поступлением в колледжи Москвы.\nДавай выберем, с чего начать.";
+  const GREETING_TEXT = "Привет! Я KAIT.ai — помощник абитуриента КАИТ №20.\nРасскажу о специальностях, поступлении и учебных площадках колледжа.";
 
   function ensureStyles() {
     if (document.getElementById("kait-widget-style")) return;
@@ -378,7 +379,7 @@
     launcher.className = "kait-launcher";
     launcher.type = "button";
     launcher.title = "Открыть чат";
-    launcher.setAttribute("aria-label", "Открыть чат с Амби");
+    launcher.setAttribute("aria-label", "Открыть чат KAIT.ai");
     launcher.appendChild(createAmbiAvatar("launcher"));
 
     const panel = document.createElement("section");
@@ -390,7 +391,7 @@
           <span class="kait-header-avatar"></span>
           <div class="kait-title">
             <strong></strong>
-            <span>AI-помощник поступления в колледжи Москвы</span>
+            <span>Помощник абитуриента КАИТ №20</span>
           </div>
         </div>
         <button class="kait-icon-button" type="button" title="Свернуть" aria-label="Свернуть">&times;</button>
